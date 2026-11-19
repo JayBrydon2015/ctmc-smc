@@ -1,0 +1,19 @@
+name: ctmc-smc
+
+channels:
+  - defaults
+
+dependencies:
+  - python
+  - numpy
+  - xarray
+  - pandas
+  - scipy
+  - scikit-learn
+  - statsmodels
+  - matplotlib
+  - seaborn
+  - spyder
+
+  - pip:
+      - git+https://github.com/JayBrydon2015/particles.git
