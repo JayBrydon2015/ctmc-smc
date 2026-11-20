@@ -1,2 +1,5 @@
+![logo_ctmc](logo_ctmc.png)
+
 # ctmc-smc
-Tracking time-dependent generator paths of continuous-time Markov chains via sequential Monte Carlo methods.
+
+Bayesian inference of time-dependent generator paths of continuous-time Markov chains via sequential Monte Carlo methods.

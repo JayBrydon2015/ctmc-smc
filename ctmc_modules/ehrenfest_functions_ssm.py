@@ -2,7 +2,7 @@
 
 """
 
-The Ehrenfest state-space models used in the second simulation study.
+SSM and functions used in the second simulation study on an Ehrenfest model.
 
 """
 
@@ -53,7 +53,7 @@ def run_particle_filter_bv(*,
         qs = np.array([0.05, 0.5, 0.95]) # 90% interval & median
     
     
-    #### Run the bootstrap particle filter ####
+    ## Run the bootstrap particle filter ##
     
     fk_boot = augssm.AugmentedBootstrap(ssm=ehrenfest_ssm, data=data)
     pf_boot = particles.SMC(
@@ -67,7 +67,7 @@ def run_particle_filter_bv(*,
     print()
     
     
-    #### Store particles, weights, etc in an xarray.Dataset ####
+    ## Store particles, weights, etc in an xarray.Dataset ##
     
     ds_boot = xr.Dataset({
         
@@ -101,7 +101,7 @@ def run_particle_filter_bv(*,
     })
     
     
-    #### Calculate quantiles and add into ds_boot ####
+    ## Calculate quantiles and add into ds_boot ##
     
     ds_boot["X_quantiles"] = xr.apply_ufunc(
         weighted_quantile,
@@ -166,25 +166,25 @@ class EhrenfestSSM_BV(augssm.AugmentedStateSpaceModel):
         An extension of the continuous-time Markov chain state-space model
         for inferring the container volumes of an Ehrenfest model setup.
         
-        INPUTS
+        Inputs
         ------
         L: number of total gas molecules in the containers.
         J: number of random walkers.
         delta_t: real time between observations.
-        C: parameter for scaling the transition variance.
+        C: transition variance multiplier.
         omega: ndarray of shape (2,), used in the calculation of the
             transition rates.
         mu0: ndarray of shape (2,), the means of the prior distributions of
-            both containers' volumes.
+            the box volumes.
         var0: ndarray of shape (2,), similar to above but the variance.
         y_init: initial configuration of RWs (set to None or don't pass 
             into initialisation if using the default).
-        px_reg_term: a small constant added to beta in Option 2 in PX to help
-            with numberical stability. Stops beta from being too close to 0.
-            Note that the mean of a Gamma distribution is alpha / beta.
-        px_verbose: if True and if t % px_verbose_int == 0, prints the value
-            of t in PX.
-        px_verbose_int: will print the verbose every amount of these steps.
+        reg_term: a small constant added to beta in PX to ensure numerical
+            stability. Stops beta from being too close to 0. Note that the
+            mean of a Gamma distribution is alpha / beta.
+        k_verbose: if True and if t % px_verbose_int == 0, prints the value
+            of k in PY.
+        k_verbose_interval: interval between k-verbose prints.
     """
     
     def __init__(self, *,
@@ -197,13 +197,13 @@ class EhrenfestSSM_BV(augssm.AugmentedStateSpaceModel):
             var0,
             y_init = None,
             reg_term: float = 1e-6,
-            px_verbose: bool = False,
-            px_verbose_int: int = 20
+            k_verbose: bool = False,
+            k_verbose_interval: int = 20
         ):
         
         assert (
             L >= 1 and J >= 1 and delta_t > 0 and C > 0 and
-            reg_term > 0 and px_verbose_int > 0
+            reg_term > 0 and k_verbose_interval > 0
         )
         
         assert (
@@ -238,8 +238,8 @@ class EhrenfestSSM_BV(augssm.AugmentedStateSpaceModel):
         
         self.reg_term = reg_term
         
-        self.px_verbose = px_verbose
-        self.px_verbose_int = px_verbose_int
+        self.k_verbose = k_verbose
+        self.k_verbose_interval = k_verbose_interval
     
     
     def PX0(self):
@@ -250,14 +250,14 @@ class EhrenfestSSM_BV(augssm.AugmentedStateSpaceModel):
     
     def PX(self, t, xp):
         
-        if self.px_verbose and t % self.px_verbose_int == 0:
-            print("t:", t)
-        
         delta_t_times_C = self.delta_t * self.C
         
-        # Note: transition variance == delta_t * C
+        # Transition variance == delta_t * C
         alpha = xp ** 2 / delta_t_times_C
-        beta  = xp / delta_t_times_C + self.reg_term # Forces beta != 0
+        beta  = (
+            xp / delta_t_times_C
+            + self.reg_term # Forces beta != 0
+        )
         
         return dists.IndepProd(*[
             dists.Gamma(alpha[:, i], beta[:, i])
@@ -266,6 +266,9 @@ class EhrenfestSSM_BV(augssm.AugmentedStateSpaceModel):
     
     
     def PY(self, t, xp, x, datap=None):
+        
+        if self.k_verbose and t % self.k_verbose_interval == 0:
+            print("k:", t+1)
         
         if datap is None:
             datap = self.y_init
@@ -284,7 +287,7 @@ class EhrenfestSSM_BV(augssm.AugmentedStateSpaceModel):
             for p, q in self.all_gen_positions
         ], axis=1)
         
-        P_mat = np.stack([
+        P_k = np.stack([
             compute_transition_prob_matrix(
                 lams_k[i],
                 self.n,
@@ -294,6 +297,6 @@ class EhrenfestSSM_BV(augssm.AugmentedStateSpaceModel):
         ], axis=0)
         
         return dists.IndepProd(
-            *[get_cat_dist(P_mat, y_i) for y_i in datap]
+            *[get_cat_dist(P_k, y_i) for y_i in datap]
         )
 

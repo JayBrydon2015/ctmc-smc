@@ -26,7 +26,7 @@ from ctmc_modules.functions import (
 
 
 
-## CTMC SSM CLASS ##
+#### CTMC SSM CLASS ####
 
 
 class CTMC(augssm.AugmentedStateSpaceModel):

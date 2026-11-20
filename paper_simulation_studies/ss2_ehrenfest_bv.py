@@ -26,7 +26,7 @@ from ctmc_modules.functions import (
     get_rw_all_state_p_initial_config,
 )
 
-from paper_simulation_studies.ehrenfest_functions_ssm import (
+from ctmc_modules.ehrenfest_functions_ssm import (
     EhrenfestSSM_BV,
     run_particle_filter_bv,
     run_particle_smoother_bv,
@@ -160,7 +160,7 @@ for run_idx in range(num_runs):
         L=L, delta_t=delta_t, J=J, C=C,
         mu0=mu0, var0=var0, omega=omega,
         y_init=y_init,
-        px_verbose=True, px_verbose_int=20, 
+        k_verbose=True, k_verbose_interval=20, 
     )
     
     y_init = ehrenfest_ssm.y_init
